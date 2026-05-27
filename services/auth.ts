@@ -4,18 +4,13 @@ import { User, ApiResponse } from '../types';
 export const authService = {
   login: async (email: string, password: string) => {
     const response = await api.post<{ access: string; refresh: string }>('/auth/login/', { email, password });
-    
-    // In a real app, we'd have a /auth/me endpoint to get user details after login
-    // For now we'll mock the user object
-    const mockUser: User = {
-      id: '1',
-      email,
-      first_name: 'Test',
-      last_name: 'User',
-      role: 'student'
-    };
 
-    return { user: mockUser, token: response.data.access, refreshToken: response.data.refresh };
+    // Fetch the real user profile using the received token
+    const meResponse = await api.get<User>('/users/me/', {
+      headers: { Authorization: `Bearer ${response.data.access}` }
+    });
+
+    return { user: meResponse.data, token: response.data.access, refreshToken: response.data.refresh };
   },
 
   register: async (email: string, password: string, first_name: string, last_name: string) => {

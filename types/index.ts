@@ -4,6 +4,8 @@ export interface User {
   first_name: string;
   last_name: string;
   role: 'student' | 'admin';
+  is_staff?: boolean;
+  is_superuser?: boolean;
 }
 
 export interface Career {
@@ -37,6 +39,7 @@ export interface Simulation {
 export interface AdvisorSession {
   id: string;
   student_id: string;
+  title: string;
   started_at: string;
   messages: AdvisorMessage[];
 }

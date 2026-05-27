@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { learningService } from '@/services/learning';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -123,9 +124,13 @@ function StepCard({ step, onToggle }: { step: LearningStep; onToggle: (id: numbe
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function LearningPage() {
+  const searchParams = useSearchParams();
+  const careerParam = searchParams.get('career'); // e.g. ?career=Full+Stack+Developer
+
   const qc = useQueryClient();
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
+  const [careerPromptDismissed, setCareerPromptDismissed] = useState(false);
 
   const { data: paths = [], isLoading, isError } = useQuery({
     queryKey: ['learningPaths'],
@@ -174,6 +179,56 @@ export default function LearningPage() {
             Your AI-generated, week-by-week plan to reach your target role.
           </p>
         </div>
+
+        {/* Career-specific prompt banner — from career detail page */}
+        {careerParam && !careerPromptDismissed && (
+          <div
+            className="mb-6 rounded-2xl p-5 animate-fp-in"
+            style={{
+              background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(0,196,204,0.06))',
+              border: '1px solid rgba(139,92,246,0.3)',
+            }}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(139,92,246,0.15)' }}>
+                <span className="material-icons" style={{ fontSize: '20px', color: '#8b5cf6' }}>route</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#8b5cf6' }}>
+                  Career Learning Path
+                </p>
+                <p className="text-sm font-semibold mb-1" style={{ color: '#f1f5f9' }}>
+                  Generate a learning pathway for <span style={{ color: '#8b5cf6' }}>{decodeURIComponent(careerParam)}</span>?
+                </p>
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  Gemini will create a personalized week-by-week study plan tailored to this career path and your current skills.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-4">
+              <button
+                onClick={() => {
+                  setCareerPromptDismissed(true);
+                  generateMutation.mutate();
+                }}
+                disabled={generating}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+                style={{ background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: '#fff', border: 'none', cursor: 'pointer' }}
+              >
+                <span className="material-icons" style={{ fontSize: '15px' }}>auto_awesome</span>
+                Yes, generate pathway
+              </button>
+              <button
+                onClick={() => setCareerPromptDismissed(true)}
+                className="px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: 'rgba(255,255,255,0.05)', color: '#64748b', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+              >
+                No, skip
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="glass-card p-8 text-center" style={{ border: '1px solid rgba(139,92,246,0.2)' }}>
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
@@ -226,6 +281,56 @@ export default function LearningPage() {
 
   return (
     <div className="p-8" style={{ fontFamily: 'Inter, sans-serif' }}>
+      {/* Career-specific prompt banner — from career detail page */}
+      {careerParam && !careerPromptDismissed && (
+        <div
+          className="mb-6 rounded-2xl p-5 animate-fp-in"
+          style={{
+            background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(0,196,204,0.06))',
+            border: '1px solid rgba(139,92,246,0.3)',
+          }}
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(139,92,246,0.15)' }}>
+              <span className="material-icons" style={{ fontSize: '20px', color: '#8b5cf6' }}>route</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#8b5cf6' }}>
+                Career Learning Path
+              </p>
+              <p className="text-sm font-semibold mb-1" style={{ color: '#f1f5f9' }}>
+                Generate a new pathway for <span style={{ color: '#8b5cf6' }}>{decodeURIComponent(careerParam)}</span>?
+              </p>
+              <p className="text-xs" style={{ color: '#475569' }}>
+                You already have an active pathway. Would you like to generate a fresh one tailored to this career?
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 mt-4">
+            <button
+              onClick={() => {
+                setCareerPromptDismissed(true);
+                if (confirm('This will archive your current pathway. Continue?')) generateMutation.mutate();
+              }}
+              disabled={generating}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+              style={{ background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: '#fff', border: 'none', cursor: 'pointer' }}
+            >
+              <span className="material-icons" style={{ fontSize: '15px' }}>auto_awesome</span>
+              Yes, generate new pathway
+            </button>
+            <button
+              onClick={() => setCareerPromptDismissed(true)}
+              className="px-4 py-2 rounded-xl text-sm font-medium"
+              style={{ background: 'rgba(255,255,255,0.05)', color: '#64748b', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+            >
+              Keep current
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
         <div>

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '@/services/user';
+import { resumeUploadService } from '@/services/admin';
 
 const EXPERIENCE_LEVELS = [
   { value: 'beginner', label: 'Beginner (0–1 years)' },
@@ -43,6 +44,7 @@ const inputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | 
 export default function SettingsPage() {
   const setUser = useAuthStore(s => s.setUser);
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '',
@@ -53,6 +55,8 @@ export default function SettingsPage() {
   });
 
   const [saved, setSaved] = useState(false);
+  const [pdfStatus, setPdfStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [pdfMsg, setPdfMsg] = useState('');
 
   const { data: profileData, isLoading } = useQuery({
     queryKey: ['userProfile'],
@@ -90,6 +94,23 @@ export default function SettingsPage() {
     },
     onError: () => alert('Failed to update profile. Please try again.'),
   });
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPdfStatus('uploading');
+    setPdfMsg('');
+    try {
+      const result = await resumeUploadService.upload(file);
+      setForm(f => ({ ...f, resume_text: result.preview || '' }));
+      setPdfStatus('success');
+      setPdfMsg(`✓ PDF parsed — ${result.characters_extracted.toLocaleString()} characters extracted`);
+    } catch (err: any) {
+      setPdfStatus('error');
+      setPdfMsg(err?.response?.data?.error || 'Failed to parse PDF. Please paste manually.');
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [key]: e.target.value }));
@@ -252,10 +273,47 @@ export default function SettingsPage() {
       </Section>
 
       {/* Resume */}
-      <Section title="Resume / CV Text">
-        <p className="text-xs mb-3" style={{ color: '#475569' }}>
-          Paste your resume text below. The AI uses this for deep skill gap analysis and personalised career recommendations.
-        </p>
+      <Section title="Resume / CV">
+        {/* PDF Upload Zone */}
+        <div
+          className="mb-4 rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-all"
+          style={{
+            borderColor: pdfStatus === 'success' ? '#10b981' : pdfStatus === 'error' ? '#ef4444' : 'rgba(0,196,204,0.25)',
+            background: 'rgba(0,196,204,0.03)',
+          }}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input ref={fileInputRef} type="file" accept=".pdf" onChange={handlePdfUpload} className="hidden" />
+          {pdfStatus === 'uploading' ? (
+            <div className="flex items-center justify-center gap-2" style={{ color: '#00c4cc' }}>
+              <span className="material-icons animate-spin" style={{ fontSize: '20px' }}>autorenew</span>
+              <span className="text-sm">Parsing PDF...</span>
+            </div>
+          ) : (
+            <>
+              <span className="material-icons mb-2" style={{ fontSize: '28px', color: pdfStatus === 'success' ? '#10b981' : '#00c4cc' }}>
+                {pdfStatus === 'success' ? 'check_circle' : 'upload_file'}
+              </span>
+              <p className="text-sm font-medium" style={{ color: '#94a3b8' }}>
+                {pdfStatus === 'success' ? 'PDF uploaded successfully' : 'Click to upload your Resume PDF'}
+              </p>
+              <p className="text-xs mt-1" style={{ color: '#475569' }}>Supports .pdf files only · Max 10MB</p>
+            </>
+          )}
+        </div>
+
+        {/* Status message */}
+        {pdfMsg && (
+          <p className="text-xs mb-3 flex items-center gap-1.5"
+            style={{ color: pdfStatus === 'success' ? '#10b981' : '#ef4444' }}>
+            <span className="material-icons" style={{ fontSize: '13px' }}>
+              {pdfStatus === 'success' ? 'check_circle' : 'error'}
+            </span>
+            {pdfMsg}
+          </p>
+        )}
+
+        <p className="text-xs mb-2" style={{ color: '#475569' }}>Or paste your resume text below:</p>
         <Field label="Resume Text">
           <textarea value={form.resume_text} onChange={set('resume_text')} rows={8}
             placeholder="Paste your full resume/CV text here..."

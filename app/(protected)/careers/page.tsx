@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { careerService } from '@/services/career';
 
@@ -37,6 +38,13 @@ function growthColor(outlook: string): string {
 }
 
 export default function CareerExplorer() {
+  const searchParams = useSearchParams();
+  const matchParam = searchParams.get('matches'); // comma-separated career IDs from dashboard
+  const matchedIds = new Set(
+    matchParam ? matchParam.split(',').map(s => s.trim()).filter(Boolean) : []
+  );
+  const comingFromDashboard = matchedIds.size > 0;
+
   const [search, setSearch] = useState('');
 
   const { data: careers = [], isLoading, isError, refetch } = useQuery({
@@ -50,6 +58,14 @@ export default function CareerExplorer() {
     c.title.toLowerCase().includes(search.toLowerCase()) ||
     (c.required_skills || []).some((s: string) => s.toLowerCase().includes(search.toLowerCase()))
   );
+
+  // When coming from dashboard matches, sort matched careers first
+  const sorted = comingFromDashboard && search.trim() === ''
+    ? [
+        ...filtered.filter((c: any) => matchedIds.has(String(c.id))),
+        ...filtered.filter((c: any) => !matchedIds.has(String(c.id))),
+      ]
+    : filtered;
 
   return (
     <div className="p-8" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -106,11 +122,28 @@ export default function CareerExplorer() {
         </div>
       )}
 
+      {/* Matched careers banner */}
+      {comingFromDashboard && !isLoading && !search && (
+        <div className="mb-5 rounded-2xl px-5 py-4 flex items-center gap-3"
+          style={{
+            background: 'linear-gradient(135deg, rgba(0,196,204,0.08), rgba(59,130,246,0.06))',
+            border: '1px solid rgba(0,196,204,0.2)',
+          }}
+        >
+          <span className="material-icons flex-shrink-0" style={{ fontSize: '18px', color: '#00c4cc' }}>auto_awesome</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: '#f1f5f9' }}>Your top {matchedIds.size} career matches are highlighted below</p>
+            <p className="text-xs" style={{ color: '#475569' }}>Based on your skills, target roles, and simulation history</p>
+          </div>
+          <Link href="/settings" className="text-xs font-semibold flex-shrink-0" style={{ color: '#00c4cc' }}>Update profile →</Link>
+        </div>
+      )}
+
       {/* Results count */}
       {!isLoading && !isError && (
         <div className="mb-4">
           <p className="text-xs" style={{ color: '#475569' }}>
-            {search ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${search}"` : `Showing all ${filtered.length} careers`}
+            {search ? `${sorted.length} result${sorted.length !== 1 ? 's' : ''} for "${search}"` : `Showing all ${sorted.length} careers`}
           </p>
         </div>
       )}
@@ -118,7 +151,8 @@ export default function CareerExplorer() {
       {/* Career Grid */}
       {!isLoading && !isError && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((c: any) => {
+          {sorted.map((c: any) => {
+            const isMatch = matchedIds.has(String(c.id));
             const icon = getIcon(c.title);
             const gColor = growthColor(c.growth_outlook || '');
             const skills: string[] = (c.required_skills || []).slice(0, 4);
@@ -126,11 +160,25 @@ export default function CareerExplorer() {
             return (
               <Link href={`/careers/${c.id}`} key={c.id}>
                 <div
-                  className="glass-card p-6 cursor-pointer transition-all group flex flex-col h-full"
-                  style={{ border: '1px solid rgba(255,255,255,0.06)' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(59,130,246,0.25)')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)')}
+                  className="glass-card p-6 cursor-pointer transition-all group flex flex-col h-full relative"
+                  style={{
+                    border: isMatch
+                      ? '1px solid rgba(0,196,204,0.35)'
+                      : '1px solid rgba(255,255,255,0.06)',
+                    boxShadow: isMatch ? '0 0 20px rgba(0,196,204,0.06)' : undefined,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = isMatch ? 'rgba(0,196,204,0.55)' : 'rgba(59,130,246,0.25)')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = isMatch ? 'rgba(0,196,204,0.35)' : 'rgba(255,255,255,0.06)')}
                 >
+                  {/* Best Match badge */}
+                  {isMatch && (
+                    <span
+                      className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded-full font-semibold"
+                      style={{ background: 'rgba(0,196,204,0.12)', color: '#00c4cc', border: '1px solid rgba(0,196,204,0.25)' }}
+                    >
+                      ✦ Best Match
+                    </span>
+                  )}
                   {/* Title row */}
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"

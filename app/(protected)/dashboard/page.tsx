@@ -244,9 +244,17 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-sm font-semibold" style={{ color: '#94a3b8' }}>Top Career Matches</h3>
-              <p className="text-xs mt-0.5" style={{ color: '#475569' }}>AI-scored alignment to your profile</p>
+              <p className="text-xs mt-0.5" style={{ color: '#475569' }}>
+                Scored by skill overlap + your target roles
+              </p>
             </div>
-            <Link href="/careers" className="text-xs font-semibold flex items-center gap-1" style={{ color: '#3b82f6' }}>
+            <Link
+              href={matches.length > 0
+                ? `/careers?matches=${matches.slice(0, 5).map((m: any) => m.career_id).join(',')}`
+                : '/careers'}
+              className="text-xs font-semibold flex items-center gap-1"
+              style={{ color: '#3b82f6' }}
+            >
               View all <span className="material-icons" style={{ fontSize: '14px' }}>arrow_forward</span>
             </Link>
           </div>
@@ -255,7 +263,12 @@ export default function DashboardPage() {
               const pct = m.match_percentage || 0;
               const color = pct >= 80 ? '#10b981' : pct >= 60 ? '#3b82f6' : '#f59e0b';
               return (
-                <div key={i} className="flex items-center gap-4">
+                <Link
+                  key={i}
+                  href={m.career_id ? `/careers/${m.career_id}` : '/careers'}
+                  className="flex items-center gap-4 rounded-xl px-3 py-2 -mx-3 transition-all hover:bg-white/5 block"
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-black" style={{ background: `${color}22`, color }}>
                     {i + 1}
                   </div>
@@ -268,16 +281,18 @@ export default function DashboardPage() {
                       <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
                     </div>
                   </div>
-                </div>
+                  <span className="material-icons flex-shrink-0" style={{ fontSize: '14px', color: '#334155' }}>chevron_right</span>
+                </Link>
               );
             })}
             {matches.length === 0 && (
               <p className="text-xs" style={{ color: '#475569' }}>
-                No matches yet. <Link href="/settings" style={{ color: '#3b82f6' }}>Add target roles in your profile →</Link>
+                No matches yet. <Link href="/settings" style={{ color: '#3b82f6' }}>Add your skills and target roles in Settings →</Link>
               </p>
             )}
           </div>
         </div>
+
 
         {/* AI Next Action */}
         <div className="glass-card p-6 flex flex-col" style={{ background: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.15)' }}>

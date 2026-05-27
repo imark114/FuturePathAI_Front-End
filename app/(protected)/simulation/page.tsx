@@ -33,6 +33,7 @@ async function fetchSimulations(): Promise<SimulationData[]> {
 export default function SimulationPage() {
   const searchParams = useSearchParams();
   const skillParam = searchParams.get('skill'); // e.g. ?skill=Version+Control+Systems
+  const careerParam = searchParams.get('career'); // e.g. ?career=Full+Stack+Developer
   const autoStartedRef = useRef(false);
 
   const queryClient = useQueryClient();
@@ -40,6 +41,7 @@ export default function SimulationPage() {
   const [userResponse, setUserResponse] = useState('');
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [autoStartNotice, setAutoStartNotice] = useState<string | null>(null);
+  const [careerPromptDismissed, setCareerPromptDismissed] = useState(false);
 
   const { data: careers = [] } = useQuery({ queryKey: ['careers'], queryFn: fetchCareers });
   const { data: pastSimulations = [] } = useQuery({ queryKey: ['simulations'], queryFn: fetchSimulations });
@@ -102,7 +104,61 @@ export default function SimulationPage() {
           <p className="text-sm" style={{ color: '#64748b' }}>Real-world scenarios powered by Gemini AI — make decisions under pressure.</p>
         </div>
 
-        {/* Auto-start notice */}
+        {/* Career-specific prompt banner — from career detail page */}
+        {careerParam && !careerPromptDismissed && !startMutation.isPending && (
+          <div
+            className="mb-6 rounded-2xl p-5 animate-fp-in"
+            style={{
+              background: 'linear-gradient(135deg, rgba(79,70,229,0.12), rgba(0,196,204,0.08))',
+              border: '1px solid rgba(79,70,229,0.3)',
+            }}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(79,70,229,0.15)' }}>
+                <span className="material-icons" style={{ fontSize: '20px', color: '#818cf8' }}>model_training</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#818cf8' }}>
+                  Career Simulation
+                </p>
+                <p className="text-sm font-semibold mb-1" style={{ color: '#f1f5f9' }}>
+                  Start a simulation for <span style={{ color: '#818cf8' }}>{decodeURIComponent(careerParam)}</span>?
+                </p>
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  Gemini will generate a real-world workplace scenario specifically for this career path.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-4">
+              <button
+                onClick={() => {
+                  const decoded = decodeURIComponent(careerParam);
+                  const match = (careers as any[]).find((c: any) =>
+                    c.title.toLowerCase() === decoded.toLowerCase() ||
+                    c.title.toLowerCase().includes(decoded.toLowerCase())
+                  ) || (careers as any[])[0];
+                  if (match) startMutation.mutate(match.id);
+                  setCareerPromptDismissed(true);
+                }}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+                style={{ background: 'linear-gradient(135deg, #4f46e5, #818cf8)', color: '#fff', border: 'none', cursor: 'pointer' }}
+              >
+                <span className="material-icons" style={{ fontSize: '15px' }}>play_arrow</span>
+                Yes, start simulation
+              </button>
+              <button
+                onClick={() => setCareerPromptDismissed(true)}
+                className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                style={{ background: 'rgba(255,255,255,0.05)', color: '#64748b', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+              >
+                No, let me choose
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Auto-start notice (skill-based) */}
         {skillParam && autoStartNotice && (
           <div className="mb-5 glass-card px-5 py-3 flex items-center gap-3" style={{ border: '1px solid rgba(245,158,11,0.25)' }}>
             <span className="material-icons flex-shrink-0" style={{ color: '#f59e0b', fontSize: '18px' }}>info</span>

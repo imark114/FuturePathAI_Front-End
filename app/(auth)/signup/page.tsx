@@ -24,7 +24,7 @@ export default function SignupPage() {
       setError('');
       const { user, token } = await authService.googleLogin(tokenResponse.access_token);
       loginStore(user, token);
-      router.push('/dashboard');
+      router.push(user.role === 'admin' ? '/admin-panel' : '/dashboard');
     } catch (err) {
       setError('Google login failed. Please try again.');
     } finally {
@@ -45,7 +45,7 @@ export default function SignupPage() {
       if (isLogin) {
         const { user, token } = await authService.login(email, password);
         loginStore(user, token);
-        router.push('/dashboard');
+        router.push(user.role === 'admin' ? '/admin-panel' : '/dashboard');
       } else {
         await authService.register(email, password, firstName, lastName);
         setIsLogin(true);

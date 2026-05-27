@@ -21,8 +21,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // Don't intercept 401s from the login endpoint itself —
+    // those are wrong credentials and should be handled by the calling code.
+    const isLoginRequest = originalRequest.url?.includes('/auth/login/');
+
     // Check if error is 401 and we haven't already tried to refresh the token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
       originalRequest._retry = true;
       
       const { refreshToken, setToken, logout } = useAuthStore.getState();

@@ -5,6 +5,10 @@ export const adminService = {
     const res = await api.get('/users/admin/stats/');
     return res.data;
   },
+  getActivityChart: async () => {
+    const res = await api.get('/users/admin/activity-chart/');
+    return res.data;
+  },
   getUsers: async (search = '', page = 1) => {
     const res = await api.get('/users/admin/users/', { params: { search, page } });
     return res.data;
@@ -30,6 +34,24 @@ export const adminService = {
   },
   getSimulations: async (page = 1) => {
     const res = await api.get('/users/admin/simulations/', { params: { page } });
+    return res.data;
+  },
+};
+
+export const careerComparisonService = {
+  compare: async (careerId: number | string) => {
+    const res = await api.get(`/analytics/career-comparison/${careerId}/`);
+    return res.data;
+  },
+};
+
+export const resumeUploadService = {
+  upload: async (file: File) => {
+    const formData = new FormData();
+    formData.append('resume', file);
+    const res = await api.post('/users/upload-resume/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data;
   },
 };
